@@ -55,10 +55,14 @@ public class SecurityConfig {
     }
 
     @Bean
-    JwtEncoder jwtEncoder(RsaKeyMaterial material) {
-        RSAKey key = new RSAKey.Builder((java.security.interfaces.RSAPublicKey) material.publicKey())
+    RSAKey signingJwk(RsaKeyMaterial material) {
+        return new RSAKey.Builder((java.security.interfaces.RSAPublicKey) material.publicKey())
             .privateKey((java.security.interfaces.RSAPrivateKey) material.privateKey()).keyID("novacommerce-auth-key").build();
-        return new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(key)));
+    }
+
+    @Bean
+    JwtEncoder jwtEncoder(RSAKey signingJwk) {
+        return new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(signingJwk)));
     }
 
     @Bean
@@ -84,7 +88,7 @@ public class SecurityConfig {
             .cors(corsConfig -> corsConfig.configurationSource(cors))
             .sessionManagement(config -> config.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/health", "/api/v1/auth/csrf", "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
+                .requestMatchers("/actuator/health", "/api/v1/auth/csrf", "/api/v1/auth/jwks", "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
                 .requestMatchers("/api/v1/auth/me", "/api/v1/auth/logout").authenticated()
                 .anyRequest().denyAll())
             .oauth2ResourceServer(oauth -> oauth.bearerTokenResolver(tokenResolver).jwt(jwt -> jwt.decoder(decoder).jwtAuthenticationConverter(jwtAuthenticationConverter())))

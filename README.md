@@ -6,7 +6,7 @@ NovaCommerce is a production-style distributed commerce platform designed to dem
 
 ## Project Overview
 
-This repository contains independently deployable Spring Boot service shells, a Next.js technical shell, local infrastructure definitions, design documentation, and the implemented Authentication & Identity Service. Commerce functionality beyond identity is **planned**, not implemented.
+This repository contains independently deployable Spring Boot services, a Next.js storefront shell, local infrastructure definitions, design documentation, and the implemented Authentication & Identity and Catalog services. Inventory, ordering, payment, and event workflows are **planned**, not implemented.
 
 ## Engineering Goals
 
@@ -16,15 +16,15 @@ This repository contains independently deployable Spring Boot service shells, a 
 
 ## Current Status
 
-**Phase 1 — Authentication & Identity Service.** The auth service now supports browser-based registration, login, refresh, logout, and current-user lookup. Catalog management, inventory, orders, payments, and event processing remain **planned**.
+**Phase 2 — Catalog & Product Discovery.** Authentication and catalog foundations are implemented: browser identity, JWKS publication, product/variant/category/brand management, PostgreSQL search, Redis-aside detail caching, public discovery APIs, and a small storefront/admin shell. Inventory, ordering, payments, and event processing remain **planned**.
 
 ## Planned Architecture
 
-The Next.js application will own user experience, while Spring Boot services will own commerce rules and data. PostgreSQL, Redis, and Kafka are available as local development foundations but are not yet connected to services. Read the [system overview](docs/architecture/system-overview.md) for the proposed boundaries.
+The Next.js application owns user experience, while Spring Boot services own commerce rules and data. Auth owns `novacommerce_auth`; Catalog owns `novacommerce_catalog`. Catalog currently connects to PostgreSQL and can use Redis for cache-aside reads; Kafka remains a local foundation only. Read the [system overview](docs/architecture/system-overview.md) and [catalog architecture](docs/architecture/catalog.md).
 
 ## Technology Stack
 
-- Backend: Java 21 LTS, Spring Boot 4.1, Maven, Spring Web, Validation, Actuator, Spring Security, Spring Data JPA, Flyway, PostgreSQL, JUnit, and Testcontainers
+- Backend: Java 21 LTS, Spring Boot 4.1, Maven, Spring Web, Validation, Actuator, Spring Security, Spring Data JPA, Flyway, PostgreSQL, Redis, JUnit, and Testcontainers
 - Frontend: Next.js 16, React 19, TypeScript, App Router, ESLint
 - Local infrastructure: PostgreSQL 17, Redis 7.4, Apache Kafka 4.0 in KRaft mode
 - Planned when justified: Redis and Kafka integrations, AWS, OpenTelemetry, Prometheus, Grafana, and GitHub Actions
@@ -68,7 +68,9 @@ scripts/                  Future repository automation
 
 1. **Phase 0 (complete):** architecture, repository, runtime, and local infrastructure foundation.
 2. **Phase 1 (complete):** Authentication & Identity Service.
-3. **Later (planned):** catalog and inventory, order coordination, payment reliability, event-driven integration, observability, performance engineering, and cloud deployment.
+3. **Phase 2 (complete):** Catalog & Product Discovery.
+4. **Phase 3 (planned):** Inventory & Reservation Service.
+5. **Later (planned):** order coordination, payment reliability, event-driven integration, observability, performance engineering, and cloud deployment.
 
 ## Security
 

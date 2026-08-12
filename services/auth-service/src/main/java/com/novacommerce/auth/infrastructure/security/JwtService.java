@@ -30,7 +30,7 @@ public class JwtService {
             .id(UUID.randomUUID().toString())
             .claim("roles", user.getRoles().stream().map(Enum::name).sorted().toList())
             .build();
-        JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256).type("JWT").build();
+        JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256).keyId("novacommerce-auth-key").type("JWT").build();
         return encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }
 }

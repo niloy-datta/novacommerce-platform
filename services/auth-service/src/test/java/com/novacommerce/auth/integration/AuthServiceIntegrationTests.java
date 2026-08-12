@@ -17,6 +17,7 @@ import com.novacommerce.auth.infrastructure.persistence.UserAccountRepository;
 import com.novacommerce.auth.infrastructure.security.JwtService;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import jakarta.servlet.http.Cookie;
 import java.nio.charset.StandardCharsets;
@@ -163,6 +164,19 @@ class AuthServiceIntegrationTests {
         mvc.perform(post("/api/v1/auth/refresh")).andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/auth/me"))
             .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+    }
+
+    @Test
+    void publishesPublicJwksAndUsesStableKeyIdForIssuedTokens() throws Exception {
+        mvc.perform(get("/api/v1/auth/jwks"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.keys[0].kid").value("novacommerce-auth-key"))
+            .andExpect(jsonPath("$.keys[0].n").isNotEmpty())
+            .andExpect(jsonPath("$.keys[0].e").isNotEmpty())
+            .andExpect(jsonPath("$.keys[0].d").doesNotExist());
+        register();
+        String access = cookie(login(PASSWORD).getResponse().getHeaders("Set-Cookie"), "NC_ACCESS");
+        assertThat(SignedJWT.parse(access).getHeader().getKeyID()).isEqualTo("novacommerce-auth-key");
     }
 
     @Test

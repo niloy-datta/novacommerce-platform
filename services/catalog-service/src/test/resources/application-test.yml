@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:catalog;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6399
+      timeout: 100ms
+catalog:
+  auth:
+    issuer: test-issuer
+    audience: test-audience
+    jwks-uri: http://127.0.0.1:1/jwks
+  allowed-origins:
+    - http://localhost:3000
+  cache:
+    product-ttl: PT10M

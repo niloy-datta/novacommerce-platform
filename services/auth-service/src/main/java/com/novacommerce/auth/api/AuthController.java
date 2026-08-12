@@ -13,6 +13,8 @@ import com.novacommerce.auth.domain.user.UserAccount;
 import com.novacommerce.auth.domain.user.UserStatus;
 import com.novacommerce.auth.infrastructure.persistence.UserAccountRepository;
 import com.novacommerce.auth.infrastructure.security.CookieBearerTokenResolver;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,6 +33,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.Map;
 import com.novacommerce.auth.api.error.AuthException;
 
 @RestController
@@ -42,15 +45,21 @@ public class AuthController {
     private final RefreshTokenService refreshTokens;
     private final UserAccountRepository users;
     private final AuthProperties properties;
+    private final RSAKey signingJwk;
 
     public AuthController(RegistrationService registration, AuthenticationService authentication, RefreshTokenService refreshTokens,
-                          UserAccountRepository users, AuthProperties properties) {
+                          UserAccountRepository users, AuthProperties properties, RSAKey signingJwk) {
         this.registration = registration; this.authentication = authentication; this.refreshTokens = refreshTokens;
-        this.users = users; this.properties = properties;
+        this.users = users; this.properties = properties; this.signingJwk = signingJwk;
     }
 
     @GetMapping("/csrf")
     public CsrfResponse csrf(CsrfToken token) { return new CsrfResponse(token.getToken(), token.getHeaderName()); }
+
+    @GetMapping("/jwks")
+    public Map<String, Object> jwks() {
+        return new JWKSet(signingJwk.toPublicJWK()).toJSONObject();
+    }
 
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {

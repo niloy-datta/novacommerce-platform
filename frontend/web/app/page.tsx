@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 const plannedApplications = [
-  { name: "Store", description: "Customer-facing commerce experience", status: "Planned" },
-  { name: "Admin", description: "Operations and platform administration", status: "Planned" },
+  { name: "Store", description: "Catalog-backed product discovery", status: "Available", href: "/products" },
+  { name: "Admin", description: "Draft catalog operations surface", status: "Available", href: "/admin/catalog" },
 ];
 
 export default function HomePage() {
@@ -22,11 +22,11 @@ export default function HomePage() {
         <div><p className="eyebrow">Applications</p><h2 id="applications-title">Product surfaces, planned deliberately.</h2></div>
         <div className="application-grid">
           {plannedApplications.map((application) => (
-            <article className="application-card" key={application.name}>
+            <Link className="application-card" href={application.href} key={application.name}>
               <p className="card-status">{application.status}</p>
               <h3>{application.name}</h3>
               <p>{application.description}</p>
-            </article>
+            </Link>
           ))}
         </div>
       </section>
