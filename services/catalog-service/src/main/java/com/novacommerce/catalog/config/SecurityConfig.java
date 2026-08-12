@@ -15,6 +15,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -23,7 +24,12 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
+import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
+import org.springframework.security.web.authentication.AuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -62,6 +68,15 @@ public class SecurityConfig {
         csrf.setCookieCustomizer(builder -> builder.sameSite("Lax").path("/"));
         RequestMatcher apiMutations = request -> !List.of("GET", "HEAD", "TRACE", "OPTIONS").contains(request.getMethod())
             && request.getRequestURI().startsWith("/api/");
+        JwtAuthenticationProvider jwtProvider = new JwtAuthenticationProvider(decoder);
+        jwtProvider.setJwtAuthenticationConverter(converter);
+        AuthenticationConverter cookieToken = request -> {
+            String token = resolver.resolve(request);
+            return token == null ? null : new BearerTokenAuthenticationToken(token);
+        };
+        BearerTokenAuthenticationFilter bearerFilter = new BearerTokenAuthenticationFilter(new ProviderManager(jwtProvider), cookieToken);
+        bearerFilter.setAuthenticationEntryPoint((request, response, exception) ->
+            writeError(response, HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "Authentication required", request.getRequestURI()));
         http.csrf(config -> config.csrfTokenRepository(csrf).requireCsrfProtectionMatcher(apiMutations))
             .cors(config -> config.configurationSource(cors))
             .sessionManagement(config -> config.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -70,7 +85,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/products/**", "/api/v1/categories/**", "/api/v1/brands/**").permitAll()
                 .requestMatchers("/api/v1/admin/catalog/**").hasRole("ADMIN")
                 .anyRequest().denyAll())
-            .oauth2ResourceServer(oauth -> oauth.bearerTokenResolver(resolver).jwt(jwt -> jwt.decoder(decoder).jwtAuthenticationConverter(converter)))
+            .addFilterBefore(bearerFilter, AnonymousAuthenticationFilter.class)
             .exceptionHandling(errors -> errors
                 .authenticationEntryPoint((request, response, exception) -> writeError(response, HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "Authentication required", request.getRequestURI()))
                 .accessDeniedHandler(accessDeniedHandler()));

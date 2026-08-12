@@ -2,6 +2,8 @@ package com.novacommerce.auth.config;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.novacommerce.auth.infrastructure.security.CookieBearerTokenResolver;
 import com.novacommerce.auth.infrastructure.security.PemKeyLoader;
@@ -57,7 +59,11 @@ public class SecurityConfig {
     @Bean
     RSAKey signingJwk(RsaKeyMaterial material) {
         return new RSAKey.Builder((java.security.interfaces.RSAPublicKey) material.publicKey())
-            .privateKey((java.security.interfaces.RSAPrivateKey) material.privateKey()).keyID("novacommerce-auth-key").build();
+            .privateKey((java.security.interfaces.RSAPrivateKey) material.privateKey())
+            .keyID("novacommerce-auth-key")
+            .keyUse(KeyUse.SIGNATURE)
+            .algorithm(JWSAlgorithm.RS256)
+            .build();
     }
 
     @Bean

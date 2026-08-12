@@ -16,7 +16,7 @@ This repository contains independently deployable Spring Boot services, a Next.j
 
 ## Current Status
 
-**Phase 2 — Catalog & Product Discovery.** Authentication and catalog foundations are implemented: browser identity, JWKS publication, product/variant/category/brand management, PostgreSQL search, Redis-aside detail caching, public discovery APIs, and a small storefront/admin shell. Inventory, ordering, payments, and event processing remain **planned**.
+**Phase 2 — Catalog & Product Discovery.** Authentication and catalog foundations are implemented: browser identity, JWKS publication, product/variant/category/brand management, PostgreSQL full-text search, Redis cache-aside product details, public discovery APIs, and a small storefront/admin shell. Inventory, ordering, payments, and event processing remain **planned**.
 
 ## Planned Architecture
 
@@ -24,10 +24,11 @@ The Next.js application owns user experience, while Spring Boot services own com
 
 ## Technology Stack
 
-- Backend: Java 21 LTS, Spring Boot 4.1, Maven, Spring Web, Validation, Actuator, Spring Security, Spring Data JPA, Flyway, PostgreSQL, Redis, JUnit, and Testcontainers
-- Frontend: Next.js 16, React 19, TypeScript, App Router, ESLint
+- Backend: Java 21 LTS, Spring Boot 4.1, Maven, Spring Web, Validation, Actuator, Spring Security, Spring Data JPA, Flyway, PostgreSQL full-text search, Redis product caching, JUnit, and Testcontainers
+- Authentication integration: RS256 JWTs, public JWKS distribution, and independent issuer/audience validation in resource services
+- Frontend: Next.js 16, React 19, strict TypeScript, App Router, ESLint, and catalog-backed product discovery
 - Local infrastructure: PostgreSQL 17, Redis 7.4, Apache Kafka 4.0 in KRaft mode
-- Planned when justified: Redis and Kafka integrations, AWS, OpenTelemetry, Prometheus, Grafana, and GitHub Actions
+- Planned when justified: Kafka domain workflows, AWS, OpenTelemetry, Prometheus, Grafana, and GitHub Actions
 
 ## Authentication
 
@@ -35,16 +36,16 @@ The browser receives an HttpOnly `NC_ACCESS` cookie containing a 15-minute RS256
 
 New public registrations receive only the `CUSTOMER` role. `ADMIN` exists for controlled future provisioning. The auth service owns the separate local-development `novacommerce_auth` PostgreSQL database. Production requires HTTPS, `AUTH_COOKIE_SECURE=true`, and externally supplied RSA key paths. See [authentication architecture](docs/architecture/authentication.md).
 
-## Planned Services
+## Services
 
-| Service | Planned responsibility |
-| --- | --- |
-| `auth-service` | Identity and access management |
-| `catalog-service` | Product and merchandising data |
-| `inventory-service` | Availability and reservation workflows |
-| `order-service` | Order lifecycle coordination |
-| `payment-service` | Payment authorization and capture coordination |
-| `notification-service` | Customer and operational communications |
+| Service | Responsibility | Status |
+| --- | --- | --- |
+| `auth-service` | Identity and access management | Implemented |
+| `catalog-service` | Product and merchandising data | Implemented |
+| `inventory-service` | Availability and reservation workflows | Planned |
+| `order-service` | Order lifecycle coordination | Planned |
+| `payment-service` | Payment authorization and capture coordination | Planned |
+| `notification-service` | Customer and operational communications | Planned |
 
 ## Repository Structure
 
@@ -63,6 +64,8 @@ scripts/                  Future repository automation
 3. Start infrastructure with `docker compose --env-file .env -f infrastructure/docker/compose.yaml up -d`.
 4. Run backend tests with `./mvnw test` on macOS/Linux or `mvnw.cmd test` on Windows. A running service exposes `GET /actuator/health` on its configured port.
 5. In `frontend/web`, run `npm install` and `npm run dev`, then visit `http://localhost:3000`.
+
+The PostgreSQL-specific integration suites use Testcontainers and skip when Docker is unavailable; a skipped suite is not equivalent to a passing PostgreSQL execution.
 
 ## Engineering Roadmap
 

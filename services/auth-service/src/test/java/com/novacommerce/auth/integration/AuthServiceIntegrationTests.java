@@ -171,9 +171,14 @@ class AuthServiceIntegrationTests {
         mvc.perform(get("/api/v1/auth/jwks"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.keys[0].kid").value("novacommerce-auth-key"))
+            .andExpect(jsonPath("$.keys[0].kty").value("RSA"))
+            .andExpect(jsonPath("$.keys[0].use").value("sig"))
+            .andExpect(jsonPath("$.keys[0].alg").value("RS256"))
             .andExpect(jsonPath("$.keys[0].n").isNotEmpty())
             .andExpect(jsonPath("$.keys[0].e").isNotEmpty())
-            .andExpect(jsonPath("$.keys[0].d").doesNotExist());
+            .andExpect(jsonPath("$.keys[0].d").doesNotExist())
+            .andExpect(jsonPath("$.keys[0].p").doesNotExist())
+            .andExpect(jsonPath("$.keys[0].q").doesNotExist());
         register();
         String access = cookie(login(PASSWORD).getResponse().getHeaders("Set-Cookie"), "NC_ACCESS");
         assertThat(SignedJWT.parse(access).getHeader().getKeyID()).isEqualTo("novacommerce-auth-key");

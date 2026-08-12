@@ -18,4 +18,4 @@ HS256 would share signing material with validators. A full authorization server 
 
 ## Consequences
 
-Private keys must be external configuration; public-key distribution is a later integration concern.
+Private keys must be external configuration. Auth publishes only public JWK material with a stable key ID so resource services can validate tokens independently.

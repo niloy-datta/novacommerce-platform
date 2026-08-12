@@ -10,7 +10,7 @@ Commerce workflows need durable, transactional relational storage. The local dev
 
 ## Decision
 
-Use PostgreSQL as the planned primary database. Each service will own its schema, migrations, and data access; no service may use another service's database as an integration mechanism.
+Use PostgreSQL as the primary database. Each service owns its logical database, migrations, and data access; no service may use another service's database as an integration mechanism. Auth owns `novacommerce_auth`, while Catalog owns `novacommerce_catalog`.
 
 ## Alternatives Considered
 

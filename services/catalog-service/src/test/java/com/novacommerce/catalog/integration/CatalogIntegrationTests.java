@@ -1,5 +1,6 @@
 package com.novacommerce.catalog.integration;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -44,12 +45,29 @@ class CatalogIntegrationTests {
         products.saveAndFlush(active);
         Product draft = new Product(UUID.randomUUID(), "Draft Product", "draft-product", "Not public", "", brand);
         products.saveAndFlush(draft);
+        Product archived = new Product(UUID.randomUUID(), "Archived Keyboard", "archived-keyboard", "Not public", "", brand);
+        archived.archive();
+        products.saveAndFlush(archived);
 
         mvc.perform(get("/api/v1/products?q=keyboard&page=0&size=1"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(1))
             .andExpect(jsonPath("$.items[0].slug").value("nova-keyboard"))
             .andExpect(jsonPath("$.totalElements").value(1));
         mvc.perform(get("/api/v1/products/draft-product")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/products/archived-keyboard")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/products/nova-keyboard"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.variants[0].price.amount").value(99.00));
+    }
+
+    @Test
+    void rejectsInvalidSearchInputAndActivationWithoutActiveVariant() throws Exception {
+        mvc.perform(get("/api/v1/products?page=-1")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/products?size=101")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/products?minPrice=50&maxPrice=10")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/products?sort=created_at%20desc")).andExpect(status().isBadRequest());
+        Product draft = new Product(UUID.randomUUID(), "No Variant", "no-variant", null, null, null);
+        assertThatThrownBy(draft::activate).isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("active variant");
     }
 
     @Test
@@ -67,6 +85,7 @@ class CatalogIntegrationTests {
     void publicRoutesDoNotRequireAuthentication() throws Exception {
         mvc.perform(get("/api/v1/categories")).andExpect(status().isOk());
         mvc.perform(get("/api/v1/brands")).andExpect(status().isOk());
-        mvc.perform(get("/actuator/health")).andExpect(status().is5xxServerError());
+        mvc.perform(get("/api/v1/catalog/csrf")).andExpect(status().isOk()).andExpect(jsonPath("$.token").isNotEmpty());
+        mvc.perform(get("/actuator/health")).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UP"));
     }
 }
