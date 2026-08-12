@@ -1,0 +1,38 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+.local/
+.local/keys/
+*.pem
+*.key
+
+# Java and Maven
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/timing.properties
+
+# Node.js and Next.js
+**/node_modules/
+**/.next/
+**/out/
+**/coverage/
+*.tsbuildinfo
+
+# Local data and logs
+data/
+*.log
+logs/
+
+# IDE and OS
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: ${AUTH_DB_URL}
+    username: ${AUTH_DB_USERNAME}
+    password: ${AUTH_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+server:
+  port: ${SERVER_PORT:8081}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+auth:
+  jwt:
+    private-key-path: ${AUTH_JWT_PRIVATE_KEY_PATH}
+    public-key-path: ${AUTH_JWT_PUBLIC_KEY_PATH}
+    issuer: ${AUTH_JWT_ISSUER:novacommerce-auth}
+    audience: ${AUTH_JWT_AUDIENCE:novacommerce-api}
+    access-token-ttl: ${AUTH_ACCESS_TOKEN_TTL:PT15M}
+    refresh-token-ttl: ${AUTH_REFRESH_TOKEN_TTL:P7D}
+  cookie:
+    secure: ${AUTH_COOKIE_SECURE:true}
+    same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+    domain: ${AUTH_COOKIE_DOMAIN:}
+  allowed-origins: ${AUTH_ALLOWED_ORIGINS:http://localhost:3000}
