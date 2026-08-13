@@ -1,0 +1,13 @@
+spring:
+  datasource: {url: "jdbc:h2:mem:orders;MODE=PostgreSQL;DB_CLOSE_DELAY=-1", username: sa, password: "", driver-class-name: org.h2.Driver}
+  jpa:
+    hibernate: {ddl-auto: create-drop}
+  flyway: {enabled: false}
+  task:
+    scheduling: {enabled: false}
+order:
+  auth: {issuer: test-issuer, audience: test-audience, jwks-uri: "http://127.0.0.1:1/jwks"}
+  catalog-base-url: http://127.0.0.1:1
+  inventory-base-url: http://127.0.0.1:1
+  allowed-origins: [http://localhost:3000]
+  reconciliation-interval: PT1H

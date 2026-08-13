@@ -1,10 +1,25 @@
 spring:
-  application:
-    name: order-service
-server:
-  port: ${SERVER_PORT:8084}
+  application: {name: order-service}
+  datasource:
+    url: ${ORDER_DB_URL}
+    username: ${ORDER_DB_USERNAME}
+    password: ${ORDER_DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate: {ddl-auto: validate}
+  flyway: {enabled: true}
+server: {port: "${SERVER_PORT:8084}"}
 management:
   endpoints:
     web:
-      exposure:
-        include: health,info
+      exposure: {include: health,info}
+order:
+  auth:
+    issuer: ${ORDER_AUTH_ISSUER:novacommerce-auth}
+    audience: ${ORDER_AUTH_AUDIENCE:novacommerce-api}
+    jwks-uri: ${ORDER_AUTH_JWKS_URI:http://localhost:8081/api/v1/auth/jwks}
+  catalog-base-url: ${ORDER_CATALOG_BASE_URL:http://localhost:8082}
+  inventory-base-url: ${ORDER_INVENTORY_BASE_URL:http://localhost:8083}
+  pending-checkout-timeout: ${ORDER_PENDING_CHECKOUT_TIMEOUT:PT16M}
+  reconciliation-interval: ${ORDER_RECONCILIATION_INTERVAL:PT30S}
+  allowed-origins: ${ORDER_ALLOWED_ORIGINS:http://localhost:3000}

@@ -1,0 +1,1 @@
+package com.novacommerce.order.api.error; import org.springframework.http.HttpStatus; public class OrderException extends RuntimeException{private final HttpStatus status;private final String code;public OrderException(HttpStatus s,String c,String m){super(m);status=s;code=c;}public HttpStatus status(){return status;}public String code(){return code;}}

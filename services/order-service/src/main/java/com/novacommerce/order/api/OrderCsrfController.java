@@ -1,0 +1,1 @@
+package com.novacommerce.order.api; import org.springframework.security.web.csrf.CsrfToken; import org.springframework.web.bind.annotation.*; @RestController public class OrderCsrfController{@GetMapping("/api/v1/order/csrf")Csrf csrf(CsrfToken t){return new Csrf(t.getToken(),t.getHeaderName());}record Csrf(String token,String headerName){}}

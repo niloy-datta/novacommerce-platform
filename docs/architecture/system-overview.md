@@ -4,15 +4,15 @@
 
 The Next.js application owns presentation, navigation, and browser-facing state. It is not the commerce business backend. Spring Boot services will own APIs, validation, business rules, and their own operational concerns.
 
-The proposed services are Auth (identity), Catalog (merchandising), Inventory (availability), Order (order lifecycle), Payment (payment coordination), and Notification (communications). These are boundaries for future implementation, not implemented capabilities.
+The service boundaries are Auth (identity), Catalog (merchandising), Inventory (availability), Order (cart and order lifecycle), Payment (payment coordination), and Notification (communications). Auth, Catalog, Inventory, and Order are implemented foundations; Payment and Notification remain planned.
 
 ## Data and Communication
 
-Each service will own its data and migrations. A service must not query another service's database; synchronous calls will be used only when an immediate response is required. Kafka is planned for durable domain-event propagation and workflows that can complete asynchronously. Redis is planned for narrowly justified cache, rate-limit, or ephemeral coordination use cases, never as the system of record.
+Each stateful service owns its data and migrations. A service must not query another service's database. Checkout synchronously resolves Catalog prices and reserves Inventory because the caller needs an immediate outcome; idempotency and reconciliation cover unknown results. Kafka remains planned for durable domain-event propagation. Redis is used only for justified cache-aside Catalog reads and is never the system of record.
 
 ## Failure Boundaries
 
-Service failures, unavailable downstream dependencies, and delayed events are expected independent failure domains. Future workflows must define timeouts, retries, idempotency, and reconciliation where needed. Phase 0 deliberately adds none of those mechanisms before there are concrete workflows to protect.
+Service failures and unavailable downstream dependencies are independent failure domains. Checkout uses short local transactions, stable keys, explicit pending states, safe retries, and bounded reconciliation. Payment failure handling and asynchronous delivery guarantees remain deferred until those workflows exist.
 
 ## Why This Starts Small
 
@@ -26,6 +26,8 @@ flowchart TB
     APIs --> Inventory["Inventory service"]
     APIs --> Orders["Order service"]
     APIs --> Payments["Payment service"]
+    Orders --> Catalog
+    Orders --> Inventory
     Orders -. planned events .-> Kafka["Apache Kafka"]
     Payments -. planned events .-> Kafka
     Kafka -. planned delivery .-> Notifications["Notification service"]

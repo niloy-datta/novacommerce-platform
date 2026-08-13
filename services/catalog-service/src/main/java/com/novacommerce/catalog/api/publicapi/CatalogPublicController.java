@@ -6,6 +6,7 @@ import com.novacommerce.catalog.application.CategoryService;
 import com.novacommerce.catalog.application.ProductQueryService;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,4 +24,5 @@ public class CatalogPublicController {
     @GetMapping("/categories") public List<CatalogDtos.CategoryResponse> categories() { return categories.publicList(); }
     @GetMapping("/categories/{slug}") public CatalogDtos.CategoryResponse category(@PathVariable String slug) { return CatalogDtos.CategoryResponse.from(categories.findBySlug(slug)); }
     @GetMapping("/brands") public List<CatalogDtos.BrandResponse> brands() { return brands.publicList(); }
+    @GetMapping("/catalog/variants") public List<CatalogDtos.CheckoutVariantResponse> checkoutVariants(@RequestParam("ids") List<UUID> ids) { return products.checkoutVariants(ids); }
 }

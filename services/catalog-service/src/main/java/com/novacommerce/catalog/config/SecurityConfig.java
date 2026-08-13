@@ -82,7 +82,7 @@ public class SecurityConfig {
             .sessionManagement(config -> config.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/api/v1/catalog/csrf").permitAll()
-                .requestMatchers("/api/v1/products/**", "/api/v1/categories/**", "/api/v1/brands/**").permitAll()
+                .requestMatchers("/api/v1/products/**", "/api/v1/categories/**", "/api/v1/brands/**", "/api/v1/catalog/variants").permitAll()
                 .requestMatchers("/api/v1/admin/catalog/**").hasRole("ADMIN")
                 .anyRequest().denyAll())
             .addFilterBefore(bearerFilter, AnonymousAuthenticationFilter.class)

@@ -7,6 +7,7 @@ import com.novacommerce.catalog.domain.product.Product;
 import com.novacommerce.catalog.domain.product.ProductStatus;
 import com.novacommerce.catalog.infrastructure.cache.ProductCache;
 import com.novacommerce.catalog.infrastructure.persistence.ProductRepository;
+import com.novacommerce.catalog.infrastructure.persistence.ProductVariantRepository;
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -18,8 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ProductQueryService {
-    private final ProductRepository products; private final ProductCache cache;
-    public ProductQueryService(ProductRepository products, ProductCache cache) { this.products = products; this.cache = cache; }
+    private final ProductRepository products; private final ProductVariantRepository variants; private final ProductCache cache;
+    public ProductQueryService(ProductRepository products, ProductVariantRepository variants, ProductCache cache) { this.products = products; this.variants = variants; this.cache = cache; }
+    @Transactional(readOnly=true) public List<CatalogDtos.CheckoutVariantResponse> checkoutVariants(List<java.util.UUID> ids) { if(ids==null||ids.isEmpty()||ids.size()>50||new java.util.HashSet<>(ids).size()!=ids.size()) throw new CatalogException(HttpStatus.BAD_REQUEST,"INVALID_VARIANT_BATCH","Provide 1 to 50 unique variant IDs"); return variants.findSellableByIds(ids).stream().sorted(Comparator.comparing(v->v.getId().toString())).map(CatalogDtos.CheckoutVariantResponse::from).toList(); }
     @Transactional(readOnly = true)
     public CatalogDtos.PageResponse<CatalogDtos.ProductSummaryResponse> search(String query, String category, String brand, BigDecimal minPrice, BigDecimal maxPrice, String sort, int page, int size) {
         if (page < 0 || size < 1 || size > 100) throw new CatalogException(HttpStatus.BAD_REQUEST, "INVALID_PAGINATION", "Page must be non-negative and size must be between 1 and 100");

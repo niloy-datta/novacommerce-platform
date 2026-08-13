@@ -60,6 +60,17 @@ class CatalogIntegrationTests {
     }
 
     @Test
+    void checkoutVariantBatchReturnsOnlySellableVariants() throws Exception {
+        Brand brand = brands.save(new Brand(UUID.randomUUID(), "Batch Brand", "batch-brand", null));
+        Product product = new Product(UUID.randomUUID(), "Batch Product", "batch-product", null, null, brand);
+        ProductVariant variant = new ProductVariant(UUID.randomUUID(), "BATCH-1", "Default", java.util.Map.of("size", "M"), new BigDecimal("12.50"), "USD");
+        product.addVariant(variant); product.activate(); products.save(product);
+        mvc.perform(get("/api/v1/catalog/variants").param("ids", variant.getId().toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$[0].variantId").value(variant.getId().toString()))
+            .andExpect(jsonPath("$[0].productName").value("Batch Product")).andExpect(jsonPath("$[0].price.amount").value(12.50));
+    }
+
+    @Test
     void rejectsInvalidSearchInputAndActivationWithoutActiveVariant() throws Exception {
         mvc.perform(get("/api/v1/products?page=-1")).andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/products?size=101")).andExpect(status().isBadRequest());

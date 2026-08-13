@@ -6,7 +6,7 @@ NovaCommerce is a production-style distributed commerce platform designed to dem
 
 ## Project Overview
 
-This repository contains independently deployable Spring Boot services, a Next.js storefront shell, local infrastructure definitions, design documentation, and implemented Authentication, Catalog, and Inventory foundations. Ordering, payment, and event workflows are **planned**, not implemented.
+This repository contains independently deployable Spring Boot services, a Next.js storefront, local infrastructure definitions, design documentation, and implemented Authentication, Catalog, Inventory, Cart, Order, and Checkout foundations. Payment and event workflows are **planned**, not implemented.
 
 ## Engineering Goals
 
@@ -16,11 +16,11 @@ This repository contains independently deployable Spring Boot services, a Next.j
 
 ## Current Status
 
-**Phase 3 — Inventory & Reservation Service (implementation complete; Docker validation pending).** Inventory now owns auditable stock, atomic multi-item reservations, deterministic PostgreSQL row locking, idempotent lifecycle operations, bounded expiration, and public availability. The real PostgreSQL concurrency suite is present but has not run in this Docker-unavailable environment. Ordering, payments, and event processing remain **planned**.
+**Phase 4 — Cart, Order & Checkout (implementation complete; Docker validation pending).** Order now owns authenticated carts and immutable order history, resolves authoritative Catalog prices, reserves Inventory through recoverable idempotent coordination, and exposes cart/order storefront pages. PostgreSQL concurrency suites are present but have not run in this Docker-unavailable environment. Payment and event processing remain **planned**.
 
 ## Planned Architecture
 
-The Next.js application owns user experience, while Spring Boot services own commerce rules and data. Auth owns `novacommerce_auth`; Catalog owns `novacommerce_catalog`. Catalog currently connects to PostgreSQL and can use Redis for cache-aside reads; Kafka remains a local foundation only. Read the [system overview](docs/architecture/system-overview.md) and [catalog architecture](docs/architecture/catalog.md).
+The Next.js application owns user experience, while Spring Boot services own commerce rules and data. Auth, Catalog, Inventory, and Order each own a dedicated PostgreSQL database. Catalog can use Redis for cache-aside reads; Kafka remains a local foundation only. Read the [system overview](docs/architecture/system-overview.md) and [checkout architecture](docs/architecture/order-checkout.md).
 
 ## Technology Stack
 
@@ -42,8 +42,8 @@ New public registrations receive only the `CUSTOMER` role. `ADMIN` exists for co
 | --- | --- | --- |
 | `auth-service` | Identity and access management | Implemented |
 | `catalog-service` | Product and merchandising data | Implemented |
-| `inventory-service` | Availability and reservation workflows | Planned |
-| `order-service` | Order lifecycle coordination | Planned |
+| `inventory-service` | Availability and reservation workflows | Implemented |
+| `order-service` | Cart, order, checkout, and reservation coordination | Implemented |
 | `payment-service` | Payment authorization and capture coordination | Planned |
 | `notification-service` | Customer and operational communications | Planned |
 
@@ -72,9 +72,10 @@ The PostgreSQL-specific integration suites use Testcontainers and skip when Dock
 1. **Phase 0 (complete):** architecture, repository, runtime, and local infrastructure foundation.
 2. **Phase 1 (complete):** Authentication & Identity Service.
 3. **Phase 2 (complete):** Catalog & Product Discovery.
-4. **Phase 3 (validation pending):** Inventory & Reservation Service; run the PostgreSQL/Testcontainers concurrency suite before marking complete.
-5. **Phase 4 (planned):** Cart, Order & Checkout.
-6. **Later (planned):** payment reliability, event-driven integration, observability, performance engineering, and cloud deployment.
+4. **Phase 3 (implementation complete; validation pending):** Inventory & Reservation Service.
+5. **Phase 4 (implementation complete; validation pending):** Cart, Order & Checkout; run PostgreSQL/Testcontainers concurrency suites before marking fully validated.
+6. **Phase 5 (planned):** Payment Processing, Kafka & Transactional Outbox.
+7. **Later (planned):** observability, performance engineering, and cloud deployment.
 
 ## Security
 
