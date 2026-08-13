@@ -6,7 +6,7 @@ NovaCommerce is a production-style distributed commerce platform designed to dem
 
 ## Project Overview
 
-This repository contains independently deployable Spring Boot services, a Next.js storefront shell, local infrastructure definitions, design documentation, and the implemented Authentication & Identity and Catalog services. Inventory, ordering, payment, and event workflows are **planned**, not implemented.
+This repository contains independently deployable Spring Boot services, a Next.js storefront shell, local infrastructure definitions, design documentation, and implemented Authentication, Catalog, and Inventory foundations. Ordering, payment, and event workflows are **planned**, not implemented.
 
 ## Engineering Goals
 
@@ -16,7 +16,7 @@ This repository contains independently deployable Spring Boot services, a Next.j
 
 ## Current Status
 
-**Phase 2 — Catalog & Product Discovery.** Authentication and catalog foundations are implemented: browser identity, JWKS publication, product/variant/category/brand management, PostgreSQL full-text search, Redis cache-aside product details, public discovery APIs, and a small storefront/admin shell. Inventory, ordering, payments, and event processing remain **planned**.
+**Phase 3 — Inventory & Reservation Service (implementation complete; Docker validation pending).** Inventory now owns auditable stock, atomic multi-item reservations, deterministic PostgreSQL row locking, idempotent lifecycle operations, bounded expiration, and public availability. The real PostgreSQL concurrency suite is present but has not run in this Docker-unavailable environment. Ordering, payments, and event processing remain **planned**.
 
 ## Planned Architecture
 
@@ -72,8 +72,9 @@ The PostgreSQL-specific integration suites use Testcontainers and skip when Dock
 1. **Phase 0 (complete):** architecture, repository, runtime, and local infrastructure foundation.
 2. **Phase 1 (complete):** Authentication & Identity Service.
 3. **Phase 2 (complete):** Catalog & Product Discovery.
-4. **Phase 3 (planned):** Inventory & Reservation Service.
-5. **Later (planned):** order coordination, payment reliability, event-driven integration, observability, performance engineering, and cloud deployment.
+4. **Phase 3 (validation pending):** Inventory & Reservation Service; run the PostgreSQL/Testcontainers concurrency suite before marking complete.
+5. **Phase 4 (planned):** Cart, Order & Checkout.
+6. **Later (planned):** payment reliability, event-driven integration, observability, performance engineering, and cloud deployment.
 
 ## Security
 

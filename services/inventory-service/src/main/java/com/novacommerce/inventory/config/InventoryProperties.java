@@ -1,0 +1,8 @@
+package com.novacommerce.inventory.config;
+import jakarta.validation.Valid; import jakarta.validation.constraints.*; import java.time.Duration; import java.util.*; import org.springframework.boot.context.properties.ConfigurationProperties; import org.springframework.validation.annotation.Validated;
+@Validated @ConfigurationProperties("inventory")
+public class InventoryProperties {
+ @Valid private final Auth auth=new Auth(); @NotEmpty private List<String> allowedOrigins=new ArrayList<>(List.of("http://localhost:3000")); @NotNull private Duration reservationTtl=Duration.ofMinutes(15); @NotNull private Duration expirationScanInterval=Duration.ofSeconds(30); @Min(1) @Max(1000) private int expirationBatchSize=100;
+ public Auth getAuth(){return auth;} public List<String> getAllowedOrigins(){return allowedOrigins;} public void setAllowedOrigins(List<String> v){allowedOrigins=v;} public Duration getReservationTtl(){return reservationTtl;} public void setReservationTtl(Duration v){reservationTtl=v;} public Duration getExpirationScanInterval(){return expirationScanInterval;} public void setExpirationScanInterval(Duration v){expirationScanInterval=v;} public int getExpirationBatchSize(){return expirationBatchSize;} public void setExpirationBatchSize(int v){expirationBatchSize=v;}
+ public static class Auth { @NotBlank private String issuer; @NotBlank private String audience; @NotBlank private String jwksUri; public String getIssuer(){return issuer;} public void setIssuer(String v){issuer=v;} public String getAudience(){return audience;} public void setAudience(String v){audience=v;} public String getJwksUri(){return jwksUri;} public void setJwksUri(String v){jwksUri=v;} }
+}

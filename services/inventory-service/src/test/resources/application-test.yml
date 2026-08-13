@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:inventory;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+    hikari:
+      connection-init-sql:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+  task:
+    scheduling:
+      enabled: false
+inventory:
+  auth:
+    issuer: test-issuer
+    audience: test-audience
+    jwks-uri: http://127.0.0.1:1/jwks
+  allowed-origins:
+    - http://localhost:3000
+  reservation-ttl: PT15M
+  expiration-scan-interval: PT1H
+  expiration-batch-size: 100

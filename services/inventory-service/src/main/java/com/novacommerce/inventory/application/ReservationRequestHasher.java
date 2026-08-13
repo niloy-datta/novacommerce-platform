@@ -1,0 +1,3 @@
+package com.novacommerce.inventory.application;
+import com.novacommerce.inventory.api.dto.InventoryRequests.ReservationLine; import java.nio.charset.StandardCharsets; import java.security.*; import java.util.*; import org.springframework.stereotype.Component;
+@Component public class ReservationRequestHasher {public String hash(Collection<ReservationLine> items){try{String canonical=items.stream().sorted(Comparator.comparing(ReservationLine::variantId)).map(i->i.variantId()+":"+i.quantity()).reduce((a,b)->a+"|"+b).orElse("");return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(canonical.getBytes(StandardCharsets.UTF_8)));}catch(NoSuchAlgorithmException e){throw new IllegalStateException(e);}}}
