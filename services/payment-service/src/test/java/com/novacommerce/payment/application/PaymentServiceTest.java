@@ -1,6 +1,6 @@
 package com.novacommerce.payment.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.novacommerce.payment.api.PaymentDtos.*;
 import com.novacommerce.payment.api.error.PaymentException;
 import com.novacommerce.payment.config.PaymentProperties;
