@@ -1,7 +1,7 @@
 package com.novacommerce.payment.application;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.novacommerce.payment.api.PaymentDtos.*;
 import com.novacommerce.payment.api.error.PaymentException;
 import com.novacommerce.payment.config.PaymentProperties;
@@ -164,7 +164,7 @@ public class PaymentService {
             String jsonPayload = objectMapper.writeValueAsString(data);
             OutboxEvent outboxEvent = OutboxEvent.create("Payment", payment.getId().toString(), eventType, jsonPayload);
             outboxRepository.save(outboxEvent);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new RuntimeException("Failed to serialize outbox event payload", e);
         }
     }
