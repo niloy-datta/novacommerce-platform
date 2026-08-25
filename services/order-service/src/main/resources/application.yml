@@ -1,9 +1,9 @@
 spring:
   application: {name: order-service}
   datasource:
-    url: ${ORDER_DB_URL}
-    username: ${ORDER_DB_USERNAME}
-    password: ${ORDER_DB_PASSWORD}
+    url: ${ORDER_DB_URL:jdbc:postgresql://localhost:5432/novacommerce_order}
+    username: ${ORDER_DB_USERNAME:novacommerce}
+    password: ${ORDER_DB_PASSWORD:novacommerce}
   jpa:
     open-in-view: false
     hibernate: {ddl-auto: validate}
