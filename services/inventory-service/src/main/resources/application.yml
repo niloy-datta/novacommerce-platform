@@ -2,9 +2,9 @@ spring:
   application:
     name: inventory-service
   datasource:
-    url: ${INVENTORY_DB_URL}
-    username: ${INVENTORY_DB_USERNAME}
-    password: ${INVENTORY_DB_PASSWORD}
+    url: ${INVENTORY_DB_URL:jdbc:postgresql://localhost:5432/novacommerce_inventory}
+    username: ${INVENTORY_DB_USERNAME:novacommerce}
+    password: ${INVENTORY_DB_PASSWORD:novacommerce}
     hikari:
       connection-init-sql: SET lock_timeout = '5s'
   jpa:
