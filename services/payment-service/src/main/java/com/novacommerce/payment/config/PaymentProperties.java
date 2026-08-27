@@ -10,6 +10,7 @@ public class PaymentProperties {
     private List<String> allowedOrigins = List.of("http://localhost:3000");
     private String provider = "MOCK";
     private Stripe stripe = new Stripe();
+    private long webhookToleranceSeconds = 300;
 
     public Auth getAuth() {
         return auth;
@@ -34,6 +35,9 @@ public class PaymentProperties {
     public void setProvider(String provider) {
         this.provider = provider;
     }
+
+    public long getWebhookToleranceSeconds() { return webhookToleranceSeconds; }
+    public void setWebhookToleranceSeconds(long value) { webhookToleranceSeconds = value; }
 
     public Stripe getStripe() {
         return stripe;
@@ -74,8 +78,8 @@ public class PaymentProperties {
     }
 
     public static class Stripe {
-        private String secretKey = "sk_test_mock";
-        private String webhookSecret = "whsec_mock";
+        private String secretKey = "";
+        private String webhookSecret = "";
 
         public String getSecretKey() {
             return secretKey;

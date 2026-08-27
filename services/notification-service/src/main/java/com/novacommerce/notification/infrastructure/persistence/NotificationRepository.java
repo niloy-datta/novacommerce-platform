@@ -14,4 +14,8 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     List<Notification> findByRecipientOrderByCreatedAtDesc(String recipient);
 
     List<Notification> findByStatus(NotificationStatus status);
+
+    java.util.Optional<Notification> findBySourceEventId(String sourceEventId);
+
+    List<Notification> findTop50ByStatusOrderByCreatedAtAsc(NotificationStatus status);
 }

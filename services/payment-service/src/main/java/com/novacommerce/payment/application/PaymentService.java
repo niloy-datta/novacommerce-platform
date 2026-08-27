@@ -1,188 +1,117 @@
 package com.novacommerce.payment.application;
 
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
-import com.novacommerce.payment.api.PaymentDtos.*;
+import com.novacommerce.payment.api.PaymentDtos;
 import com.novacommerce.payment.api.error.PaymentException;
 import com.novacommerce.payment.config.PaymentProperties;
 import com.novacommerce.payment.domain.*;
-import com.novacommerce.payment.infrastructure.outbox.OutboxEvent;
-import com.novacommerce.payment.infrastructure.outbox.OutboxRepository;
-import com.novacommerce.payment.infrastructure.persistence.PaymentRepository;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Instant;
+import java.util.*;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.util.*;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class PaymentService {
-
-    private final PaymentRepository paymentRepository;
-    private final OutboxRepository outboxRepository;
+    private final PaymentOperationCoordinator coordinator;
     private final Map<String, PaymentGateway> gateways;
     private final PaymentProperties properties;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper mapper;
 
-    public PaymentService(PaymentRepository paymentRepository,
-                          OutboxRepository outboxRepository,
-                          List<PaymentGateway> gatewayList,
-                          PaymentProperties properties,
-                          ObjectMapper objectMapper) {
-        this.paymentRepository = paymentRepository;
-        this.outboxRepository = outboxRepository;
-        this.properties = properties;
-        this.objectMapper = objectMapper;
-        this.gateways = new HashMap<>();
-        for (PaymentGateway gateway : gatewayList) {
-            this.gateways.put(gateway.getProviderName().toUpperCase(), gateway);
-        }
+    public PaymentService(PaymentOperationCoordinator coordinator, List<PaymentGateway> gatewayList,
+                          PaymentProperties properties, ObjectMapper mapper) {
+        this.coordinator = coordinator; this.properties = properties; this.mapper = mapper;
+        gateways = new HashMap<>();
+        gatewayList.forEach(g -> gateways.put(g.getProviderName().toUpperCase(Locale.ROOT), g));
     }
 
-    @Transactional
-    public PaymentResponse authorizePayment(UUID customerId, AuthorizePaymentRequest request) {
-        Optional<Payment> existing = paymentRepository.findByIdempotencyKey(request.idempotencyKey());
-        if (existing.isPresent()) {
-            return mapToResponse(existing.get());
-        }
-
-        List<Payment> orderPayments = paymentRepository.findByOrderId(request.orderId());
-        boolean hasSuccessfulPayment = orderPayments.stream()
-                .anyMatch(p -> p.getStatus() == PaymentStatus.AUTHORIZED || p.getStatus() == PaymentStatus.CAPTURED);
-        if (hasSuccessfulPayment) {
-            throw new PaymentException(HttpStatus.CONFLICT, "Order " + request.orderId() + " has already been paid or authorized.");
-        }
-
-        String providerName = properties.getProvider().toUpperCase();
-        PaymentGateway gateway = gateways.getOrDefault(providerName, gateways.get("MOCK"));
-
-        Payment payment = Payment.createPending(
-                UUID.randomUUID(),
-                request.orderId(),
-                customerId,
-                request.amount(),
-                request.currency(),
-                request.idempotencyKey(),
-                gateway.getProviderName()
-        );
-        payment = paymentRepository.save(payment);
-
-        PaymentGatewayResult result = gateway.authorize(
-                request.orderId(),
-                request.amount(),
-                request.currency(),
-                request.paymentToken()
-        );
-
-        if (result.success()) {
-            payment.authorize(result.gatewayTransactionId());
-            createOutboxEvent("PaymentAuthorized", payment);
-        } else {
-            payment.fail(result.errorMessage());
-            createOutboxEvent("PaymentFailed", payment);
-        }
-
-        payment = paymentRepository.save(payment);
-        return mapToResponse(payment);
-    }
-
-    @Transactional
-    public PaymentResponse capturePayment(UUID paymentId, BigDecimal amount) {
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "Payment not found with id " + paymentId));
-
-        if (payment.getStatus() != PaymentStatus.AUTHORIZED) {
-            throw new PaymentException(HttpStatus.BAD_REQUEST, "Payment is not in AUTHORIZED status. Current: " + payment.getStatus());
-        }
-
-        PaymentGateway gateway = gateways.getOrDefault(payment.getGatewayProvider().toUpperCase(), gateways.get("MOCK"));
-        PaymentGatewayResult result = gateway.capture(payment.getGatewayTransactionId(), amount);
-
-        if (result.success()) {
-            payment.capture();
-            createOutboxEvent("PaymentCaptured", payment);
-        } else {
-            payment.fail(result.errorMessage());
-            createOutboxEvent("PaymentCaptureFailed", payment);
-        }
-
-        payment = paymentRepository.save(payment);
-        return mapToResponse(payment);
-    }
-
-    @Transactional
-    public PaymentResponse refundPayment(UUID paymentId, BigDecimal amount, String reason) {
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "Payment not found with id " + paymentId));
-
-        if (payment.getStatus() != PaymentStatus.CAPTURED && payment.getStatus() != PaymentStatus.AUTHORIZED) {
-            throw new PaymentException(HttpStatus.BAD_REQUEST, "Payment cannot be refunded in current status: " + payment.getStatus());
-        }
-
-        PaymentGateway gateway = gateways.getOrDefault(payment.getGatewayProvider().toUpperCase(), gateways.get("MOCK"));
-        PaymentGatewayResult result = gateway.refund(payment.getGatewayTransactionId(), amount);
-
-        if (result.success()) {
-            payment.refund();
-            createOutboxEvent("RefundCompleted", payment);
-        } else {
-            throw new PaymentException(HttpStatus.INTERNAL_SERVER_ERROR, "Refund failed: " + result.errorMessage());
-        }
-
-        payment = paymentRepository.save(payment);
-        return mapToResponse(payment);
-    }
-
-    @Transactional(readOnly = true)
-    public List<PaymentResponse> getPaymentsForOrder(UUID orderId) {
-        return paymentRepository.findByOrderId(orderId).stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
-
-    @Transactional
-    public void processStripeWebhook(String payload, String signature) {
-        // Handle webhook event parsing and signature verification safely
-        if (payload != null && payload.contains("payment_intent.succeeded")) {
-            // Find payment by gateway transaction ID if payload provides it
-        }
-    }
-
-    private void createOutboxEvent(String eventType, Payment payment) {
+    public PaymentDtos.PaymentResponse authorizePayment(UUID customerId, PaymentDtos.AuthorizePaymentRequest request) {
+        String providerName = properties.getProvider().toUpperCase(Locale.ROOT);
+        PaymentGateway gateway = gateway(providerName);
+        var prepared = coordinator.prepareAuthorization(customerId, request, gateway.getProviderName());
+        if (!prepared.executeGateway()) return response(prepared.payment());
+        PaymentGatewayResult result;
         try {
-            Map<String, Object> data = Map.of(
-                    "paymentId", payment.getId().toString(),
-                    "orderId", payment.getOrderId().toString(),
-                    "customerId", payment.getCustomerId().toString(),
-                    "amount", payment.getAmount(),
-                    "currency", payment.getCurrency(),
-                    "status", payment.getStatus().name(),
-                    "gatewayTransactionId", payment.getGatewayTransactionId() != null ? payment.getGatewayTransactionId() : "",
-                    "failureReason", payment.getFailureReason() != null ? payment.getFailureReason() : ""
-            );
-            String jsonPayload = objectMapper.writeValueAsString(data);
-            OutboxEvent outboxEvent = OutboxEvent.create("Payment", payment.getId().toString(), eventType, jsonPayload);
-            outboxRepository.save(outboxEvent);
-        } catch (JacksonException e) {
-            throw new RuntimeException("Failed to serialize outbox event payload", e);
+            result = gateway.authorize(request.orderId(), request.amount(), request.currency(), request.paymentToken(), request.idempotencyKey());
+        } catch (RuntimeException ex) {
+            result = PaymentGatewayResult.unknown("Provider outcome is unknown; reconcile using the payment reference");
         }
+        return response(coordinator.applyAuthorization(request.idempotencyKey(), result));
     }
 
-    private PaymentResponse mapToResponse(Payment p) {
-        return new PaymentResponse(
-                p.getId(),
-                p.getOrderId(),
-                p.getCustomerId(),
-                p.getAmount(),
-                p.getCurrency(),
-                p.getStatus().name(),
-                p.getIdempotencyKey(),
-                p.getGatewayProvider(),
-                p.getGatewayTransactionId(),
-                p.getFailureReason(),
-                p.getCreatedAt(),
-                p.getUpdatedAt()
-        );
+    public PaymentDtos.PaymentResponse capturePayment(UUID customerId, UUID paymentId, BigDecimal amount, String key, boolean admin) {
+        var prepared = coordinator.prepareOperation(customerId, paymentId, PaymentOperationType.CAPTURE, amount, key, admin);
+        if (!prepared.executeGateway()) return response(prepared.payment());
+        PaymentGatewayResult result;
+        try { result = gateway(prepared.payment().getGatewayProvider()).capture(prepared.payment().getProviderPaymentId(), amount, key); }
+        catch (RuntimeException ex) { result = PaymentGatewayResult.unknown("Capture outcome is unknown; reconcile using the operation key"); }
+        return response(coordinator.applyOperation(key, result));
     }
+
+    public PaymentDtos.PaymentResponse cancelPayment(UUID customerId, UUID paymentId, String key, String reason, boolean admin) {
+        var prepared = coordinator.prepareOperation(customerId, paymentId, PaymentOperationType.CANCEL, null, key, admin);
+        if (!prepared.executeGateway()) return response(prepared.payment());
+        PaymentGatewayResult result;
+        try { result = gateway(prepared.payment().getGatewayProvider()).cancel(prepared.payment().getProviderPaymentId(), key); }
+        catch (RuntimeException ex) { result = PaymentGatewayResult.unknown("Cancel outcome is unknown; reconcile using the operation key"); }
+        return response(coordinator.applyOperation(key, result));
+    }
+
+    public PaymentDtos.PaymentResponse refundPayment(UUID customerId, UUID paymentId, BigDecimal amount, String key, boolean admin) {
+        var prepared = coordinator.prepareOperation(customerId, paymentId, PaymentOperationType.REFUND, amount, key, admin);
+        if (!prepared.executeGateway()) return response(prepared.payment());
+        PaymentGatewayResult result;
+        try { result = gateway(prepared.payment().getGatewayProvider()).refund(prepared.payment().getProviderPaymentId(), amount, key); }
+        catch (RuntimeException ex) { result = PaymentGatewayResult.unknown("Refund outcome is unknown; reconcile using the operation key"); }
+        return response(coordinator.applyOperation(key, result));
+    }
+
+    public PaymentDtos.PaymentResponse getPayment(UUID customerId, UUID id, boolean admin) { return response(coordinator.get(customerId, id, admin)); }
+    public List<PaymentDtos.PaymentResponse> getPaymentsForOrder(UUID customerId, UUID orderId, boolean admin) { return coordinator.getForOrder(customerId, orderId, admin).stream().map(PaymentService::response).toList(); }
+
+    public void processStripeWebhook(String payload, String signature) {
+        verifyStripeSignature(payload, signature);
+        try {
+            JsonNode root = mapper.readTree(payload);
+            String eventId = text(root, "id");
+            String type = text(root, "type");
+            JsonNode object = root.path("data").path("object");
+            String providerId = text(object, "id");
+            if (eventId.isBlank() || type.isBlank() || providerId.isBlank()) throw error(HttpStatus.BAD_REQUEST, "INVALID_WEBHOOK", "Webhook payload is incomplete");
+            if (!coordinator.acceptWebhook(eventId, type)) return;
+            BigDecimal amount = BigDecimal.valueOf(object.path("amount_received").asLong(object.path("amount").asLong())).movePointLeft(2);
+            coordinator.applyWebhook(providerId, type, amount.signum() > 0 ? amount : null, text(object, "last_payment_error"));
+        } catch (PaymentException ex) { throw ex; }
+        catch (Exception ex) { throw error(HttpStatus.BAD_REQUEST, "INVALID_WEBHOOK", "Webhook payload is invalid"); }
+    }
+
+    private void verifyStripeSignature(String payload, String signature) {
+        String secret = properties.getStripe().getWebhookSecret();
+        if (secret == null || secret.isBlank() || signature == null || signature.isBlank()) throw error(HttpStatus.UNAUTHORIZED, "INVALID_WEBHOOK_SIGNATURE", "Invalid webhook signature");
+        String timestamp = null, expected = null;
+        for (String part : signature.split(",")) {
+            String[] pieces = part.split("=", 2);
+            if (pieces.length != 2) continue;
+            if (pieces[0].equals("t")) timestamp = pieces[1];
+            if (pieces[0].equals("v1")) expected = pieces[1];
+        }
+        try {
+            long signedAt = Long.parseLong(timestamp == null ? "-1" : timestamp);
+            if (Math.abs(Instant.now().getEpochSecond() - signedAt) > properties.getWebhookToleranceSeconds()) throw error(HttpStatus.UNAUTHORIZED, "INVALID_WEBHOOK_SIGNATURE", "Webhook timestamp is outside tolerance");
+            Mac mac = Mac.getInstance("HmacSHA256"); mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            String actual = HexFormat.of().formatHex(mac.doFinal((timestamp + "." + payload).getBytes(StandardCharsets.UTF_8)));
+            if (expected == null || !MessageDigest.isEqual(actual.getBytes(StandardCharsets.US_ASCII), expected.getBytes(StandardCharsets.US_ASCII))) throw error(HttpStatus.UNAUTHORIZED, "INVALID_WEBHOOK_SIGNATURE", "Invalid webhook signature");
+        } catch (PaymentException ex) { throw ex; }
+        catch (Exception ex) { throw error(HttpStatus.UNAUTHORIZED, "INVALID_WEBHOOK_SIGNATURE", "Invalid webhook signature"); }
+    }
+
+    private PaymentGateway gateway(String name) { PaymentGateway gateway = gateways.get(name.toUpperCase(Locale.ROOT)); if (gateway == null) throw error(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_PROVIDER_UNAVAILABLE", "Configured payment provider is unavailable"); return gateway; }
+    private static String text(JsonNode node, String field) { JsonNode value = node.path(field); return value.isTextual() ? value.asString() : ""; }
+    private static PaymentDtos.PaymentResponse response(Payment p) { return new PaymentDtos.PaymentResponse(p.getId(), p.getOrderId(), p.getCustomerId(), p.getAmount(), p.getCurrency(), p.getStatus().name(), p.getIdempotencyKey(), p.getGatewayProvider(), p.getProviderPaymentId(), p.getFailureReason(), p.getAuthorizedAmount(), p.getCapturedAmount(), p.getRefundedAmount(), p.getCreatedAt(), p.getUpdatedAt()); }
+    private static PaymentException error(HttpStatus status, String code, String message) { return new PaymentException(status, code, message); }
 }

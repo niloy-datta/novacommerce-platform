@@ -11,6 +11,15 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      enable-idempotence: true
+      compression-type: lz4
+      properties:
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 3000
 
 server:
   port: ${SERVER_PORT:8085}
@@ -29,5 +38,8 @@ payment:
   allowed-origins: ${PAYMENT_ALLOWED_ORIGINS:http://localhost:3000}
   provider: ${PAYMENT_PROVIDER:MOCK}
   stripe:
-    secret-key: ${STRIPE_SECRET_KEY:sk_test_mock}
-    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_mock}
+    secret-key: ${STRIPE_SECRET_KEY:}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  webhook-tolerance-seconds: ${PAYMENT_WEBHOOK_TOLERANCE_SECONDS:300}
+  events-topic: ${PAYMENT_EVENTS_TOPIC:novacommerce.payment.events}
+  outbox-interval: ${PAYMENT_OUTBOX_INTERVAL:PT2S}

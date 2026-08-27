@@ -15,6 +15,7 @@ public class PaymentExceptionHandler {
         return ResponseEntity.status(ex.getStatus()).body(Map.of(
                 "timestamp", Instant.now().toString(),
                 "status", ex.getStatus().value(),
+                "code", ex.getCode(),
                 "error", ex.getStatus().getReasonPhrase(),
                 "message", ex.getMessage()
         ));

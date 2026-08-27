@@ -23,7 +23,7 @@ public class StripePaymentGateway implements PaymentGateway {
     }
 
     @Override
-    public PaymentGatewayResult authorize(UUID orderId, BigDecimal amount, String currency, String paymentToken) {
+    public PaymentGatewayResult authorize(UUID orderId, BigDecimal amount, String currency, String paymentToken, String idempotencyKey) {
         // Stripe Sandbox Simulation / REST API Adapter
         if ("tok_chargeCustomerFail".equalsIgnoreCase(paymentToken)) {
             return PaymentGatewayResult.failure("Your card was declined by Stripe Sandbox.");
@@ -33,13 +33,18 @@ public class StripePaymentGateway implements PaymentGateway {
     }
 
     @Override
-    public PaymentGatewayResult capture(String gatewayTransactionId, BigDecimal amount) {
+    public PaymentGatewayResult capture(String gatewayTransactionId, BigDecimal amount, String idempotencyKey) {
         String stripeTxId = "cap_stripe_" + UUID.randomUUID().toString().substring(0, 12);
         return PaymentGatewayResult.success(stripeTxId, "CAPTURED");
     }
 
     @Override
-    public PaymentGatewayResult refund(String gatewayTransactionId, BigDecimal amount) {
+    public PaymentGatewayResult cancel(String gatewayTransactionId, String idempotencyKey) {
+        return PaymentGatewayResult.success(gatewayTransactionId, "CANCELLED");
+    }
+
+    @Override
+    public PaymentGatewayResult refund(String gatewayTransactionId, BigDecimal amount, String idempotencyKey) {
         String stripeTxId = "re_stripe_" + UUID.randomUUID().toString().substring(0, 12);
         return PaymentGatewayResult.success(stripeTxId, "REFUNDED");
     }

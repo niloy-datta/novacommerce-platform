@@ -16,7 +16,7 @@ public class MockPaymentGateway implements PaymentGateway {
     }
 
     @Override
-    public PaymentGatewayResult authorize(UUID orderId, BigDecimal amount, String currency, String paymentToken) {
+    public PaymentGatewayResult authorize(UUID orderId, BigDecimal amount, String currency, String paymentToken, String idempotencyKey) {
         if ("fail_token".equalsIgnoreCase(paymentToken)) {
             return PaymentGatewayResult.failure("Payment authorization declined by mock gateway");
         }
@@ -25,7 +25,7 @@ public class MockPaymentGateway implements PaymentGateway {
     }
 
     @Override
-    public PaymentGatewayResult capture(String gatewayTransactionId, BigDecimal amount) {
+    public PaymentGatewayResult capture(String gatewayTransactionId, BigDecimal amount, String idempotencyKey) {
         if (gatewayTransactionId == null || gatewayTransactionId.contains("fail")) {
             return PaymentGatewayResult.failure("Capture failed for transaction " + gatewayTransactionId);
         }
@@ -34,7 +34,15 @@ public class MockPaymentGateway implements PaymentGateway {
     }
 
     @Override
-    public PaymentGatewayResult refund(String gatewayTransactionId, BigDecimal amount) {
+    public PaymentGatewayResult cancel(String gatewayTransactionId, String idempotencyKey) {
+        if (gatewayTransactionId == null || gatewayTransactionId.contains("fail")) {
+            return PaymentGatewayResult.failure("Cancel failed for transaction " + gatewayTransactionId);
+        }
+        return PaymentGatewayResult.success(gatewayTransactionId, "CANCELLED");
+    }
+
+    @Override
+    public PaymentGatewayResult refund(String gatewayTransactionId, BigDecimal amount, String idempotencyKey) {
         if (gatewayTransactionId == null || gatewayTransactionId.contains("fail")) {
             return PaymentGatewayResult.failure("Refund failed for transaction " + gatewayTransactionId);
         }

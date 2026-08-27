@@ -23,6 +23,9 @@ public class Notification {
     @Column(name = "event_type", nullable = false, length = 64)
     private String eventType;
 
+    @Column(name = "source_event_id", nullable = false, unique = true, length = 200)
+    private String sourceEventId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 32)
     private NotificationStatus status;
@@ -41,11 +44,17 @@ public class Notification {
 
     public Notification(UUID id, String recipient, String subject, String body, String eventType,
                         NotificationStatus status, int retryCount, Instant createdAt, Instant sentAt) {
+        this(id, recipient, subject, body, eventType, UUID.randomUUID().toString(), status, retryCount, createdAt, sentAt);
+    }
+
+    public Notification(UUID id, String recipient, String subject, String body, String eventType, String sourceEventId,
+                        NotificationStatus status, int retryCount, Instant createdAt, Instant sentAt) {
         this.id = id;
         this.recipient = recipient;
         this.subject = subject;
         this.body = body;
         this.eventType = eventType;
+        this.sourceEventId = sourceEventId;
         this.status = status;
         this.retryCount = retryCount;
         this.createdAt = createdAt;
@@ -53,7 +62,11 @@ public class Notification {
     }
 
     public static Notification create(String recipient, String subject, String body, String eventType) {
-        return new Notification(UUID.randomUUID(), recipient, subject, body, eventType, NotificationStatus.PENDING, 0, Instant.now(), null);
+        return create(UUID.randomUUID().toString(), recipient, subject, body, eventType);
+    }
+
+    public static Notification create(String sourceEventId, String recipient, String subject, String body, String eventType) {
+        return new Notification(UUID.randomUUID(), recipient, subject, body, eventType, sourceEventId, NotificationStatus.PENDING, 0, Instant.now(), null);
     }
 
     public void markSent() {
@@ -87,6 +100,8 @@ public class Notification {
     public String getEventType() {
         return eventType;
     }
+
+    public String getSourceEventId() { return sourceEventId; }
 
     public NotificationStatus getStatus() {
         return status;
